@@ -1,10 +1,11 @@
 const asyncHandler = require("express-async-handler");
 const Contact = require("../models/contactModel");
+const validation = require("../utilities/validation");
 //@desc Get all contacts
 //@route GET /api/contacts
 //@access public
 const getContacts = asyncHandler(async (req, res) => {
-  const contacts = await Contact.find();
+  const contacts = await Contact.find({});
   res.status(200).json(contacts);
 });
 
@@ -15,24 +16,34 @@ const createContact = asyncHandler(async (req, res) => {
   console.log("The request body is:", req.body);
   const { name, email, phone } = req.body;
   if (!name || !email || !phone) {
-    res.status(400);
-    throw new Error("All fields are mandatory");
+    return res.status(400).json({ error: `All fields must present` });
   }
-  const contact = await Contact.create({
+  const newContact = await new Contact({
     name,
     email,
     phone,
   });
-  res.status(201).json(contact);
+
+  try {
+    const savedContact = await newContact.save();
+    res.status(201).json(savedContact);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to created contact" });
+  }
 });
 
 //@desc Get contact
 //@route GET /api/contacts/:id
 //@access public
 const getContact = asyncHandler(async (req, res) => {
-  const contact = await Contact.findById(req.params.id);
+  const id = req.params.id;
+  if (!validation.isIdValidMongo(id)) {
+    return res.status(400).json({ error: "Invalid contact ID format" });
+  }
+  const contact = await Contact.findById(id);
+
   if (!contact) {
-    return res.status(404).json({ error: `Movie doesn't exist` });
+    return res.status(404).json({ error: `Contact not found` });
   }
   res.status(200).json(contact);
 });
@@ -41,13 +52,34 @@ const getContact = asyncHandler(async (req, res) => {
 //@route PUT /api/contacts/:id
 //@access public
 const updateContact = asyncHandler(async (req, res) => {
-  res.status(200).json({ message: `Update contact for ${req.params.id}` });
+  const id = req.params.id;
+  if (!validation.isIdValidMongo(id)) {
+    return res.status(400).json({ error: "Invalid contact ID format" });
+  }
+
+  const updates = req.body;
+
+  const contact = await Contact.findByIdAndUpdate(id, updates, { new: true });
+
+  if (!contact) {
+    return res.status(404).json({ error: `Contact not found` });
+  }
+  res.status(200).json(contact);
 });
 //@desc Delete contact
 //@route DELETE /api/contacts/:id
 //@access public
 const deleteContact = asyncHandler(async (req, res) => {
-  res.status(201).json({ message: `Delete contact for ${req.params.id}` });
+  const id = req.params.id;
+  if (!validation.isIdValidMongo(id)) {
+    return res.status(400).json({ error: "Invalid contact ID format" });
+  }
+  const contact = await Contact.findByIdAndDelete(id);
+
+  if (!contact) {
+    return res.status(404).json({ error: `Contact not found` });
+  }
+  res.status(200).json({ message: "Contact deleted succesfully" });
 });
 
 module.exports = {

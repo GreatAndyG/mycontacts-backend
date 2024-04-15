@@ -17,6 +17,7 @@ app.use(express.json());
 
 // Define a route
 app.use("/api/contacts", require("./routes/contactRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
 app.use(errorHandler);
 // Start the server
 app.listen(port, () => {
